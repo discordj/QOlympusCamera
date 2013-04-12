@@ -251,21 +251,57 @@ QCameraProperties *QOlympusCamera::getallproperties()
 
 	//QCDisconnect();
 
-	GetPropertyInfo(_index, OP_WB_MODE, &prop);
-	camProp = new QCameraProperty("WhiteBalance");
 	
-	camProp->setCurrentValue(QVariant((UINT16) prop.CurrentValue.ui16Value));
-	values = GetPropertyValues(_index,OP_WB_MODE,(PUINT16) &count, false);
-	//for(int i=0; i < count; i++)
-	//{
-	//	QString name = OlympusCommon::Common()->isosettings[(UINT16)(((UINT16*)values)[i])];
-	//	camProp->appendValue(name,QVariant((UINT16)(((UINT16*)values)[i])));
-	//}
-
-	//props->addProperty(QCameraProperties::Iso, camProp);
+	props->addProperty(QCameraProperties::WhiteBalanceMode, getwbproperties());
 
 	return props;
 }
+
+QCameraProperty *QOlympusCamera::getwbproperties(){
+
+	OlympusCommon *olycommon = OlympusCommon::Common();
+
+	QCameraProperties *props = new QCameraProperties();
+	int count = 0;
+	MOCHA_PROPERTY prop;
+
+	QCameraProperty *camProp = new QCameraProperty("WhiteBalance");
+
+
+	GetPropertyInfo(_index, OP_WB_MODE, &prop);
+	
+	//camProp->setCurrentValue(QVariant((UINT16) prop.CurrentValue.ui16Value));
+	const void *values = GetPropertyValues(_index,OP_WB_MODE,(PUINT16) &count, false);
+
+	for(int i=0; i < OlympusCommon::Common()->WHITEBALANCES.count(); i++)
+	{
+		QString name = OlympusCommon::Common()->WHITEBALANCES[i];
+		camProp->appendValue(name,i);
+	}
+
+
+	switch(prop.CurrentValue.ui16Value){
+		case PRM_WB_MODE_DIRECT:
+			GetPropertyInfo(_index, OP_MANUAL_WB, &prop);
+			camProp->setCurrentValue(OlympusCommon::Common()->MANUALWB_MODES[prop.CurrentValue.ui16Value]);
+			break;
+		case PRM_WB_MODE_OTWB:
+			GetPropertyInfo(_index, OP_ONETOUCH_WB, &prop);
+			camProp->setCurrentValue(OlympusCommon::Common()->ONETOUCHWB_MODES[prop.CurrentValue.ui16Value]);
+			break;
+		case PRM_WB_MODE_CUSTOM:
+			GetPropertyInfo(_index, OP_CUSTOM_WB, &prop);
+			camProp->setCurrentValue(OlympusCommon::Common()->CUSTOMWB_MODES[prop.CurrentValue.ui16Value]);
+			break;
+		default:
+			camProp->setCurrentValue(0);
+			break;
+	}
+
+	return camProp;
+
+}
+
 bool QOlympusCamera::hasBulbMode(){ 
 
 
@@ -332,6 +368,23 @@ void QOlympusCamera::setCameraProperty(QCameraProperties::QCameraPropertyTypes p
 			break;
 		case QCameraProperties::ExposureTimes:
 			SetExposureEx(_index, value.toUInt());
+			break;
+		case QCameraProperties::WhiteBalanceMode:
+			if(value.toUInt() == 0){
+				SetWhiteBalanceMode(_index, PRM_WB_MODE_AUTO);
+			}
+			else if(value.toUInt() > 0 && value.toUInt() <= 12){ //DIRECT
+				SetWhiteBalanceMode(_index, PRM_WB_MODE_DIRECT);
+				SetManualWB(_index, OlympusCommon::Common()->MANUALWB_MODES.keys(value.toInt()).at(0));
+			}
+			else if(value.toUInt() > 12 && value.toUInt() <= 16){
+				SetWhiteBalanceMode(_index, PRM_WB_MODE_OTWB);
+				SetOneTouchWB(_index, OlympusCommon::Common()->ONETOUCHWB_MODES.keys(value.toInt()).at(0));
+			}
+			else if(value.toUInt() > 16 && value.toUInt() <= 20){
+				SetWhiteBalanceMode(_index, PRM_WB_MODE_CUSTOM);
+				SetCustomWB(_index, OlympusCommon::Common()->CUSTOMWB_MODES.keys(value.toInt()).at(0));
+			}
 			break;
 	}
 

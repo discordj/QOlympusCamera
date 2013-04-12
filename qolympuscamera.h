@@ -87,7 +87,8 @@ private:
 	bool _manualbulb;
 	QCameraProperties *_properties;
 
-	QCameraProperties *QOlympusCamera::getallproperties();
+	QCameraProperties *getallproperties();
+	QCameraProperty *getwbproperties();
 
 private slots:
 	void on_bulbtimer_timeout();
